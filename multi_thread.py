@@ -4,6 +4,7 @@
 from concurrent import futures
 from time import sleep
 from contextvars import ContextVar
+from threading import Thread
 
 from timer import Timer
 
@@ -49,6 +50,16 @@ class ThreadSafeFoo:
         print(f'name = {self._name.get()}')
 
 
+def print_or_show_exception(i: int):
+    print(f'input i = {i}')
+    if i == 0:
+        raise Exception('i == 0')
+
+    sleep(5)
+    print(f'i = {i}')
+    return i
+
+
 def demo_sleep_parallelism():
     with Timer('sleep_seconds'):
         sleep_seconds(5)   # Take about 5 seconds
@@ -79,13 +90,49 @@ def demo_thread_safety():
         result = executor.map(foo.set_name_and_print, ['name 1', 'name 2'])  # Print name 1 and name 2 respectively
 
 
+def demo_exception_handling():
+    try:
+        t1 = Thread(target=print_or_show_exception, args=[0])
+        t2 = Thread(target=print_or_show_exception, args=[1])
+        t1.start()
+        t2.start()
+        t1.join()  # Throw exception
+        t2.join()  # continue running
+    except Exception as ex:
+        print(f'Catch exception when testing thread. Exception: {ex}')
+
+    try:
+        # Test ThreadPoolExecutor.map
+        with futures.ThreadPoolExecutor(2) as executor:
+            result = executor.map(print_or_show_exception, [0, 1])  # Exception will not be thrown here    
+        for r in result:
+            print(r)  # Result will be thrown when the result value is retrieved. Need to add try catch here.
+    except Exception as ex:
+        print(f'Catch exception when testing ThreadPoolExecutor.map. Exception: {ex}')
+
+    try:
+        # Test ThreadPoolExecutor.submit
+        with futures.ThreadPoolExecutor(2) as executor:
+            future1 = executor.submit(print_or_show_exception, 0)
+            future2 = executor.submit(print_or_show_exception, 1)
+
+            print(future1.result())  # Execption will be thrown here.
+            print(future2.result())
+    except Exception as ex:
+        print(f'Catch exception when testing ThreadPoolExecutor.submit. Exception: {ex}')
+    
+        
+
+
+
 def main():
     demo_sleep_parallelism()
 
     demo_countdown_parallelism()
 
     demo_thread_safety()
-    
+
+    demo_exception_handling()    
 
 if __name__ == '__main__':
     main()
