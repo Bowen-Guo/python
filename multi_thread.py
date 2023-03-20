@@ -1,6 +1,6 @@
 """Multi-thread program demo."""
 
-
+import multiprocessing
 from concurrent import futures
 from time import sleep
 from contextvars import ContextVar
@@ -22,6 +22,11 @@ def count_down(n: int):
         n -= 1
 
     print(f'Count down from {n_ini} to 0 finishes!')
+
+
+def sleep_seconds(n: int, i: int):
+    sleep(n)
+    print(f'i = {i}')
 
 
 class Foo:    
@@ -120,10 +125,14 @@ def demo_exception_handling():
             print(future2.result())
     except Exception as ex:
         print(f'Catch exception when testing ThreadPoolExecutor.submit. Exception: {ex}')
+
+
+def demo_executor_map_multiple_args():
+    l = [(5, 1), (5, 2), (5, 3)]
+    with Timer(f'Thread pool'):   # Take about 5 seconds.
+        with multiprocessing.Pool(processes=len(l)) as pool:
+            result = pool.starmap(sleep_seconds, l)  
     
-        
-
-
 
 def main():
     demo_sleep_parallelism()
@@ -132,7 +141,9 @@ def main():
 
     demo_thread_safety()
 
-    demo_exception_handling()    
+    demo_exception_handling()
+
+    demo_executor_map_multiple_args()
 
 if __name__ == '__main__':
     main()
