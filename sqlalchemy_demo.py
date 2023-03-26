@@ -13,6 +13,7 @@ class Record:
     primary_key: str
     info: str
     start_time: datetime
+    end_time: datetime = datetime.now()
 
 
 mapper_registry = registry()
@@ -23,6 +24,7 @@ record_table = Table(
     Column("primary_key", String, primary_key=True),
     Column("info", String),
     Column("start_time", DateTime),
+    Column("end_time", DateTime),
 )
 
 mapper_registry.map_imperatively(Record, record_table)
@@ -38,7 +40,7 @@ class DuplicatedPrimaryKeyException(Exception):
 
 class TableClient:
     def __init__(self, class_: type, in_memory: bool = False, echo: bool = True):
-        db_name = ':memory' if in_memory else DB_NAME
+        db_name = ':memory:' if in_memory else DB_NAME
         self._engine = create_engine(f'sqlite:///{db_name}', echo=echo)   # Sqlite in memory
         self._class = class_
         mapper_registry.metadata.create_all(self._engine) 
@@ -64,10 +66,14 @@ class TableClient:
         with Session(self._engine) as session:
             session.merge(entity)
             session.commit()
+    
+    def list_all(self):
+        with Session(self._engine) as session:
+            return session.query(self._class).all()
 
 
 def main():
-    table_client = TableClient(Record, echo=False)
+    table_client = TableClient(Record, in_memory=False, echo=False)
     primary_key = str(uuid4())
     try:
         record = table_client.get(primary_key)
@@ -107,6 +113,18 @@ def main():
     table_client.upsert(record3)
     new_record = table_client.get(key_2)
     print(f'Retrieved entity type = {type(new_record)}; value = {new_record}')
+
+    # Insert a nullable. Succeed
+    key_4 = str(uuid4())
+    record4 = Record(key_4, None, datetime.now())
+    table_client.insert(record4)
+    new_record = table_client.get(key_4)
+    print(f'value = {new_record}')
+
+    # # List all.
+    results = table_client.list_all()
+    for r in results:
+        print(f'Row = {r}')
 
 
 if __name__ == '__main__':
