@@ -111,7 +111,7 @@ def demo_exception_handling():
         with futures.ThreadPoolExecutor(2) as executor:
             result = executor.map(print_or_show_exception, [0, 1])  # Exception will not be thrown here    
         for r in result:
-            print(r)  # Result will be thrown when the result value is retrieved. Need to add try catch here.
+            print(r)  # Exceptions will be thrown when the result value is retrieved. Need to add try catch here.
     except Exception as ex:
         print(f'Catch exception when testing ThreadPoolExecutor.map. Exception: {ex}')
 
